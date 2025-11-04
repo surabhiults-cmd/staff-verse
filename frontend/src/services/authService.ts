@@ -29,7 +29,10 @@ export interface AuthResponse {
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/auth/login', credentials);
-    apiClient.setToken(response.token);
+    // Ensure token is stored
+    if (response.token) {
+      apiClient.setToken(response.token);
+    }
     return response;
   },
 

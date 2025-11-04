@@ -10,14 +10,21 @@ let poolConfig;
 
 if (process.env.DATABASE_URL) {
   // Use connection string (for Neon, Railway, etc.)
+  // Parse connection string to ensure proper format
+  let connectionString = process.env.DATABASE_URL;
+  
+  // Remove channel_binding if present (can cause issues with some clients)
+  connectionString = connectionString.replace(/[?&]channel_binding=[^&]*/, '');
+  
   poolConfig = {
-    connectionString: process.env.DATABASE_URL,
+    connectionString: connectionString,
     ssl: {
       rejectUnauthorized: false, // Required for Neon SSL connection
     },
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 30000, // Increased to 30 seconds for cloud databases
+    allowExitOnIdle: true, // Allow process to exit when pool is idle
   };
 } else {
   // Use individual environment variables (for local development)
@@ -29,7 +36,7 @@ if (process.env.DATABASE_URL) {
     password: process.env.DB_PASSWORD || 'postgres',
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000,
   };
 }
 
@@ -48,13 +55,30 @@ if (process.env.DATABASE_URL) {
   console.log('  User:', process.env.DB_USER || 'postgres');
 }
 
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
+pool.on('connect', (client) => {
+  console.log('✅ New client connected to PostgreSQL database');
 });
 
-pool.on('error', (err) => {
+pool.on('error', (err, client) => {
   console.error('❌ Unexpected error on idle client', err);
-  process.exit(-1);
+  console.error('Error details:', {
+    message: err.message,
+    code: err.code,
+    severity: err.severity
+  });
+  // Don't exit on error - let the pool handle reconnection
 });
+
+// Test connection on startup
+pool.query('SELECT NOW() as current_time, version() as pg_version')
+  .then((result) => {
+    console.log('✅ Database connection test successful');
+    console.log('  Current time:', result.rows[0].current_time);
+    console.log('  PostgreSQL version:', result.rows[0].pg_version.split(',')[0]);
+  })
+  .catch((err) => {
+    console.error('❌ Database connection test failed:', err.message);
+    console.error('Please check your DATABASE_URL in .env file');
+  });
 
 export default pool;

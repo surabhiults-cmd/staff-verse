@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { authService } from "@/services/authService";
 import Login from "@/pages/Login";
 
@@ -9,17 +9,34 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const location = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const hasToken = authService.isAuthenticated();
-      setIsAuthenticated(hasToken);
+      try {
+        // Check if token exists first
+        if (!authService.isAuthenticated()) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+
+        // Validate token by calling profile endpoint
+        await authService.getProfile();
+        setIsAuthenticated(true);
+      } catch (error) {
+        // Token is invalid or expired, clear it
+        authService.logout();
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
     };
+
     checkAuth();
   }, []);
 
-  if (isAuthenticated === null) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -31,7 +48,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return <Login />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

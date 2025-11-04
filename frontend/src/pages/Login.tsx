@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,28 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (authService.isAuthenticated()) {
+        try {
+          // Validate token by calling profile endpoint
+          await authService.getProfile();
+          // User is authenticated, redirect to dashboard
+          navigate("/", { replace: true });
+        } catch (error) {
+          // Token is invalid, allow login
+          authService.logout();
+        }
+      }
+      setIsCheckingAuth(false);
+    };
+    checkAuth();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +56,18 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
@@ -84,11 +116,6 @@ export default function Login() {
             >
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-            <div className="text-center text-sm text-muted-foreground mt-4">
-              <p>Default Admin Credentials:</p>
-              <p className="font-mono">Username: admin</p>
-              <p className="font-mono">Password: admin123</p>
-            </div>
           </form>
         </CardContent>
       </Card>
