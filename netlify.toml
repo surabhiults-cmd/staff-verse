@@ -1,0 +1,16 @@
+[build]
+  base = "."
+  command = "cd staff-verse && npm install && npm run build"
+  publish = "staff-verse/dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# SPA Redirects - Fixes navigation issues
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[context.production.environment]
+  NODE_ENV = "production"
