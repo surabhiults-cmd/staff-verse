@@ -22,6 +22,16 @@ function parseNumeric(value) {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+// Helper function to format currency
+function formatCurrency(amount) {
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Helper function to format currency with symbol
+function formatCurrencyWithSymbol(amount) {
+  return `Rs. ${formatCurrency(amount)}`;
+}
+
 export const generatePayslip = async (req, res, next) => {
   try {
     const { payroll_record_id } = req.body;
@@ -93,10 +103,13 @@ export const generatePayslip = async (req, res, next) => {
       ]
     );
 
+    const pdfFileName = path.basename(pdfPath);
+    const excelFileName = path.basename(excelPath);
+
     res.json({
       payslip: payslipResult.rows[0],
-      pdf_url: `/payslips/${path.basename(pdfPath)}`,
-      excel_url: `/payslips/${path.basename(excelPath)}`,
+      pdf_url: `/api/payslips/files/${pdfFileName}`,
+      excel_url: `/api/payslips/files/${excelFileName}`,
       message: 'Payslip generated successfully'
     });
   } catch (error) {
@@ -110,65 +123,206 @@ export const generatePDFPayslip = async (payroll) => {
       const fileName = `payslip_${payroll.employee_id_string}_${payroll.year}_${String(payroll.month).padStart(2, '0')}.pdf`;
       const filePath = path.join(payslipsDir, fileName);
 
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ 
+        margin: 50,
+        size: 'A4'
+      });
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
 
+      const pageWidth = doc.page.width;
+      const margin = 50;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Helper function to draw a table row
+      const drawTableRow = (x, y, label, amount, boxWidth, isBold = false) => {
+        const labelWidth = boxWidth * 0.6;
+        const amountWidth = boxWidth * 0.35;
+        const amountX = x + labelWidth + 10;
+        
+        doc.fontSize(10);
+        if (isBold) {
+          doc.font('Helvetica-Bold');
+        } else {
+          doc.font('Helvetica');
+        }
+        
+        doc.fillColor('#000000')
+           .text(label, x + 10, y, { width: labelWidth, continued: false })
+           .text(amount, amountX, y, { width: amountWidth, align: 'right' });
+      };
+
       // Header
-      doc.fontSize(20).text('PAYSLIP', { align: 'center' });
-      doc.moveDown();
+      doc.fillColor('#1e40af')
+         .rect(margin, margin, contentWidth, 70)
+         .fill();
+      
+      doc.fillColor('#ffffff')
+         .fontSize(24)
+         .font('Helvetica-Bold')
+         .text('PAYSLIP', margin, margin + 20, { 
+           align: 'center',
+           width: contentWidth
+         });
+      
+      doc.fontSize(11)
+         .font('Helvetica')
+         .text('HRMS & Payroll Management System', margin, margin + 50, {
+           align: 'center',
+           width: contentWidth
+         });
 
-      // Company Info
-      doc.fontSize(12).text('HRMS & Payroll Management System', { align: 'center' });
-      doc.moveDown(2);
+      let yPos = margin + 90;
 
-      // Employee Info
-      doc.fontSize(14).text('Employee Information', { underline: true });
-      doc.fontSize(10);
-      doc.text(`Employee ID: ${payroll.employee_id_string}`);
-      doc.text(`Name: ${payroll.full_name}`);
-      doc.text(`Department: ${payroll.department_name || 'N/A'}`);
-      doc.text(`Designation: ${payroll.job_role_name || 'N/A'}`);
-      doc.text(`Period: ${getMonthName(payroll.month)} ${payroll.year}`);
-      doc.text(`Days Worked: ${payroll.days_worked}`);
-      doc.moveDown();
+      // Employee Information Section
+      doc.fillColor('#f3f4f6')
+         .rect(margin, yPos, contentWidth, 100)
+         .fill();
+      
+      doc.fillColor('#000000')
+         .fontSize(12)
+         .font('Helvetica-Bold')
+         .text('Employee Information', margin + 15, yPos + 10);
+      
+      yPos += 30;
+      doc.fontSize(10)
+         .font('Helvetica');
+      
+      doc.text(`Employee ID: ${payroll.employee_id_string}`, margin + 15, yPos, { width: contentWidth / 2 - 20 });
+      doc.text(`Name: ${payroll.full_name}`, margin + 15, yPos + 18, { width: contentWidth / 2 - 20 });
+      doc.text(`Department: ${payroll.department_name || 'N/A'}`, margin + 15, yPos + 36, { width: contentWidth / 2 - 20 });
+      
+      const rightColX = margin + contentWidth / 2 + 15;
+      doc.text(`Designation: ${payroll.job_role_name || 'N/A'}`, rightColX, yPos, { width: contentWidth / 2 - 20 });
+      doc.text(`Period: ${getMonthName(payroll.month)} ${payroll.year}`, rightColX, yPos + 18, { width: contentWidth / 2 - 20 });
+      doc.text(`Days Worked: ${payroll.days_worked}`, rightColX, yPos + 36, { width: contentWidth / 2 - 20 });
 
-      // Earnings Section
-      doc.fontSize(14).text('EARNINGS', { underline: true });
-      doc.fontSize(10);
-      doc.text(`Basic Pay: ₹${payroll.basic_pay.toFixed(2)}`);
-      doc.text(`Dearness Allowance: ₹${payroll.dearness_allowance.toFixed(2)}`);
-      doc.text(`House Rent Allowance: ₹${payroll.house_rent_allowance.toFixed(2)}`);
-      doc.text(`Special Allowance: ₹${payroll.special_allowance.toFixed(2)}`);
-      doc.text(`Employer NPS Contribution: ₹${payroll.employer_nps_contribution.toFixed(2)}`);
-      doc.moveDown();
-      doc.fontSize(12).text(`Total Earnings: ₹${payroll.total_earnings.toFixed(2)}`, { align: 'right' });
-      doc.moveDown();
+      yPos = margin + 210;
 
-      // Deductions Section
-      doc.fontSize(14).text('DEDUCTIONS', { underline: true });
-      doc.fontSize(10);
-      doc.text(`GPF & Recovery: ₹${payroll.gpf_recovery.toFixed(2)}`);
-      doc.text(`SLI: ₹${payroll.sli.toFixed(2)}`);
-      doc.text(`GIS: ₹${payroll.gis.toFixed(2)}`);
-      doc.text(`Festival Bonus: ₹${payroll.festival_bonus.toFixed(2)}`);
-      doc.text(`Home Building Advance: ₹${payroll.home_building_advance.toFixed(2)}`);
-      doc.text(`Income Tax: ₹${payroll.income_tax.toFixed(2)}`);
-      doc.text(`Rent Deduction: ₹${payroll.rent_deduction.toFixed(2)}`);
-      doc.text(`LIC Contribution: ₹${payroll.lic_contribution.toFixed(2)}`);
-      doc.text(`Medisep: ₹${payroll.medisep.toFixed(2)}`);
-      doc.text(`Additional Deductions: ₹${payroll.additional_deductions.toFixed(2)}`);
-      doc.moveDown();
-      doc.fontSize(12).text(`Total Deductions: ₹${payroll.total_deductions.toFixed(2)}`, { align: 'right' });
-      doc.moveDown();
+      // Earnings and Deductions side by side
+      const boxWidth = (contentWidth - 20) / 2;
+      
+      // Earnings Box
+      doc.strokeColor('#10b981')
+         .lineWidth(2)
+         .rect(margin, yPos, boxWidth, 300)
+         .stroke();
+      
+      doc.fillColor('#10b981')
+         .fontSize(14)
+         .font('Helvetica-Bold')
+         .text('EARNINGS', margin + 10, yPos + 10, { width: boxWidth - 20, align: 'center' });
+      
+      let currentY = yPos + 40;
+      
+      const earnings = [
+        ['Basic Pay', payroll.basic_pay],
+        ['Dearness Allowance', payroll.dearness_allowance],
+        ['House Rent Allowance', payroll.house_rent_allowance],
+        ['Special Allowance', payroll.special_allowance],
+        ['Employer NPS Contribution', payroll.employer_nps_contribution]
+      ];
 
-      // Net Payable
-      doc.fontSize(16).text(`Net Payable: ₹${payroll.net_payable.toFixed(2)}`, { align: 'right', bold: true });
-      doc.moveDown(2);
+      earnings.forEach(([label, amount]) => {
+        const formattedAmount = formatCurrency(amount);
+        drawTableRow(margin, currentY, label + ':', `Rs. ${formattedAmount}`, boxWidth, false);
+        currentY += 20;
+      });
+
+      // Total Earnings
+      currentY += 10;
+      doc.fillColor('#d1fae5')
+         .rect(margin + 10, currentY - 5, boxWidth - 20, 25)
+         .fill();
+      
+      const totalEarningsFormatted = formatCurrency(payroll.total_earnings);
+      drawTableRow(margin, currentY, 'Total Earnings:', `Rs. ${totalEarningsFormatted}`, boxWidth, true);
+
+      // Deductions Box
+      const deductionsX = margin + boxWidth + 20;
+      currentY = yPos + 40;
+      
+      doc.strokeColor('#ef4444')
+         .lineWidth(2)
+         .rect(deductionsX, yPos, boxWidth, 300)
+         .stroke();
+      
+      doc.fillColor('#ef4444')
+         .fontSize(14)
+         .font('Helvetica-Bold')
+         .text('DEDUCTIONS', deductionsX + 10, yPos + 10, { width: boxWidth - 20, align: 'center' });
+
+      const deductions = [
+        ['GPF & Recovery', payroll.gpf_recovery],
+        ['SLI', payroll.sli],
+        ['GIS', payroll.gis],
+        ['Festival Bonus', payroll.festival_bonus],
+        ['Home Building Advance', payroll.home_building_advance],
+        ['Income Tax', payroll.income_tax],
+        ['Rent Deduction', payroll.rent_deduction],
+        ['LIC Contribution', payroll.lic_contribution],
+        ['Medisep', payroll.medisep],
+        ['Additional Deductions', payroll.additional_deductions]
+      ];
+
+      deductions.forEach(([label, amount]) => {
+        if (amount > 0) {
+          const formattedAmount = formatCurrency(amount);
+          drawTableRow(deductionsX, currentY, label + ':', `Rs. ${formattedAmount}`, boxWidth, false);
+          currentY += 20;
+        }
+      });
+
+      // Total Deductions
+      currentY += 10;
+      doc.fillColor('#fee2e2')
+         .rect(deductionsX + 10, currentY - 5, boxWidth - 20, 25)
+         .fill();
+      
+      const totalDeductionsFormatted = formatCurrency(payroll.total_deductions);
+      drawTableRow(deductionsX, currentY, 'Total Deductions:', `Rs. ${totalDeductionsFormatted}`, boxWidth, true);
+
+      // Net Payable Section
+      yPos = margin + 530;
+      doc.fillColor('#fef3c7')
+         .rect(margin, yPos, contentWidth, 50)
+         .fill();
+      
+      doc.strokeColor('#f59e0b')
+         .lineWidth(2)
+         .rect(margin, yPos, contentWidth, 50)
+         .stroke();
+
+      const netPayableFormatted = formatCurrency(payroll.net_payable);
+      doc.fillColor('#92400e')
+         .fontSize(16)
+         .font('Helvetica-Bold')
+         .text('Net Payable:', margin + 20, yPos + 15, { width: 150 })
+         .text(`Rs. ${netPayableFormatted}`, margin + 170, yPos + 15, {
+           width: contentWidth - 190,
+           align: 'right'
+         });
 
       // Footer
-      doc.fontSize(8).text('This is a system generated payslip.', { align: 'center' });
-      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, { align: 'center' });
+      yPos = doc.page.height - margin - 30;
+      doc.fillColor('#6b7280')
+         .fontSize(8)
+         .font('Helvetica')
+         .text('This is a computer-generated payslip and does not require a signature.', 
+               margin, yPos, {
+                 align: 'center',
+                 width: contentWidth
+               });
+
+      yPos += 12;
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}`, margin, yPos, {
+        align: 'center',
+        width: contentWidth
+      });
 
       doc.end();
       stream.on('finish', () => resolve(filePath));

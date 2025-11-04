@@ -23,16 +23,23 @@ export const payslipService = {
   },
 
   async downloadPayslip(payrollRecordId: number, type: 'pdf' | 'excel' = 'pdf'): Promise<void> {
-    // First generate the payslip if it doesn't exist
-    const response = await this.generatePayslip(payrollRecordId);
-    
-    // Then download the file
-    const url = type === 'pdf' ? response.pdf_url : response.excel_url;
-    const filename = type === 'pdf' 
-      ? `payslip_${payrollRecordId}.pdf`
-      : `payslip_${payrollRecordId}.xlsx`;
-    
-    await apiClient.downloadFile(url, filename);
+    try {
+      // First generate the payslip if it doesn't exist
+      const response = await this.generatePayslip(payrollRecordId);
+      
+      // Extract filename from URL
+      const url = type === 'pdf' ? response.pdf_url : response.excel_url;
+      const filename = url.split('/').pop() || (type === 'pdf' ? `payslip_${payrollRecordId}.pdf` : `payslip_${payrollRecordId}.xlsx`);
+      
+      // Backend now returns /api/payslips/files/filename, so we can use it directly
+      // Extract the endpoint part (remove /api prefix since apiClient adds it)
+      const endpoint = url.replace(/^\/api/, '');
+      
+      await apiClient.downloadFile(endpoint, filename);
+    } catch (error: any) {
+      // Re-throw with better error message
+      throw new Error(error.message || `Failed to download payslip: ${error}`);
+    }
   },
 
   async sendEmail(payslipId: number): Promise<{ message: string }> {

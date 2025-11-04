@@ -29,13 +29,13 @@ if (process.env.DATABASE_URL) {
 } else {
   // Use individual environment variables (for local development)
   poolConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'hrms_database',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    max: 20,
-    idleTimeoutMillis: 30000,
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'hrms_database',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'postgres',
+  max: 20,
+  idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   };
 }
@@ -49,10 +49,10 @@ if (process.env.DATABASE_URL) {
   const maskedUrl = process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@');
   console.log('  Connection String:', maskedUrl);
 } else {
-  console.log('  Database:', process.env.DB_NAME || 'hrms_database');
-  console.log('  Host:', process.env.DB_HOST || 'localhost');
-  console.log('  Port:', process.env.DB_PORT || 5432);
-  console.log('  User:', process.env.DB_USER || 'postgres');
+console.log('  Database:', process.env.DB_NAME || 'hrms_database');
+console.log('  Host:', process.env.DB_HOST || 'localhost');
+console.log('  Port:', process.env.DB_PORT || 5432);
+console.log('  User:', process.env.DB_USER || 'postgres');
 }
 
 pool.on('connect', (client) => {
@@ -79,6 +79,6 @@ pool.query('SELECT NOW() as current_time, version() as pg_version')
   .catch((err) => {
     console.error('❌ Database connection test failed:', err.message);
     console.error('Please check your DATABASE_URL in .env file');
-  });
+});
 
 export default pool;

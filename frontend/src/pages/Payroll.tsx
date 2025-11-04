@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ export default function Payroll() {
   const currentYear = getCurrentYear();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -95,7 +97,18 @@ export default function Payroll() {
     }
   };
 
-  const handleDownload = async (recordId: number) => {
+  const handleDownload = async (recordId: number, recordStatus: string) => {
+    // Only allow download if payroll is processed or finalized
+    if (recordStatus !== 'processed' && recordStatus !== 'finalized') {
+      toast({
+        title: "Cannot Download",
+        description: "Payroll must be processed before downloading payslip",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingId(recordId);
     try {
       await payslipService.downloadPayslip(recordId, 'pdf');
       toast({
@@ -105,9 +118,11 @@ export default function Payroll() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to download payslip",
+        description: error.message || "Failed to download payslip. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -236,8 +251,19 @@ export default function Payroll() {
           {isLoading ? (
             <div className="text-center py-8">Loading payroll data...</div>
           ) : payrollRecords.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No payroll records found for {getMonthName(selectedMonth)} {selectedYear}
+            <div className="text-center py-8">
+              <div className="text-muted-foreground mb-4">
+                <p className="text-lg mb-2">No payroll records found for {getMonthName(selectedMonth)} {selectedYear}</p>
+                <p className="text-sm">Click "Process Payroll" to calculate payroll for all active employees</p>
+              </div>
+              <Button
+                onClick={handleProcessPayroll}
+                disabled={processMutation.isPending}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {processMutation.isPending ? 'Processing...' : 'Process Payroll Now'}
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -274,9 +300,15 @@ export default function Payroll() {
                     <Button 
                       variant="outline" 
                       size="icon"
-                      onClick={() => handleDownload(record.id)}
+                      onClick={() => handleDownload(record.id, record.status)}
+                      disabled={downloadingId === record.id || (record.status !== 'processed' && record.status !== 'finalized')}
+                      title={record.status === 'processed' || record.status === 'finalized' ? 'Download Payslip' : 'Payroll must be processed first'}
                     >
-                      <Download className="h-4 w-4" />
+                      {downloadingId === record.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
