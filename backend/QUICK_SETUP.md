@@ -88,3 +88,4 @@ Now you should be able to login!
 - Ensure database `hrms_db` exists before running migrations
 
 
+

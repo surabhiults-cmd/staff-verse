@@ -131,3 +131,4 @@ Your HRMS & Payroll system is now ready to use!
 - Check `DB_HOST` and `DB_PORT` in `.env`
 
 
+

@@ -310,3 +310,4 @@ INSERT INTO deductions (name, description) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 
+

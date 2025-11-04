@@ -94,3 +94,4 @@ You should see all tables listed (roles, users, employees, etc.)
 - Make sure the database exists: `\l` in psql to list databases
 
 
+
