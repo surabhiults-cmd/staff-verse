@@ -30,7 +30,11 @@ const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:8080',
   'http://localhost:8081',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'https://staff-verse.onrender.com', // Render backend (if frontend is deployed here)
+  'https://*.netlify.app', // Netlify deployments (wildcard for all Netlify subdomains)
+  // Add specific Netlify URL if you have one:
+  // 'https://your-site-name.netlify.app'
 ];
 
 app.use(cors({
@@ -38,13 +42,26 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow all origins in development
-      // In production, uncomment below:
-      // callback(new Error('Not allowed by CORS'));
+    // Check if origin is in allowed list
+    if (allowedOrigins.some(allowedOrigin => {
+      // Support wildcard patterns (e.g., *.netlify.app)
+      if (allowedOrigin.includes('*')) {
+        const pattern = allowedOrigin.replace(/\*/g, '.*');
+        const regex = new RegExp(`^${pattern}$`);
+        return regex.test(origin);
+      }
+      return origin === allowedOrigin;
+    })) {
+      return callback(null, true);
     }
+    
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
+    // In production, only allow specific origins
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
