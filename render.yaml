@@ -1,0 +1,58 @@
+services:
+  # Backend API Service
+  - type: web
+    name: hrms-backend
+    env: node
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    rootDir: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: hrms-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: hrms-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: hrms-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: hrms-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: hrms-db
+          property: password
+      - key: FRONTEND_URL
+        sync: false  # Will be updated after frontend deployment
+
+  # Frontend Static Site
+  - type: web
+    name: hrms-frontend
+    env: static
+    buildCommand: cd staff-verse && npm install && npm run build
+    staticPublishPath: staff-verse/dist
+    rootDir: staff-verse
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # Update with backend URL after deployment
+
+  # PostgreSQL Database
+  - type: pspg
+    name: hrms-db
+    plan: starter
+    region: singapore
+    databaseName: hrms_db
+    user: hrms_user
