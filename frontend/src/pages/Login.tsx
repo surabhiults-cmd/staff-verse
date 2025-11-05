@@ -92,7 +92,7 @@ export default function Login() {
             </div>
           </div>
           
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
             Sign In
           </CardTitle>
         </CardHeader>

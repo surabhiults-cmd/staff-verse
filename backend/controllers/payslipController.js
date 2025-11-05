@@ -203,12 +203,12 @@ export const generatePDFPayslip = async (payroll) => {
       const boxWidth = (contentWidth - 20) / 2;
       
       // Earnings Box
-      doc.strokeColor('#10b981')
-         .lineWidth(2)
+      doc.strokeColor('#000000')
+         .lineWidth(1)
          .rect(margin, yPos, boxWidth, 300)
          .stroke();
       
-      doc.fillColor('#10b981')
+      doc.fillColor('#000000')
          .fontSize(14)
          .font('Helvetica-Bold')
          .text('EARNINGS', margin + 10, yPos + 10, { width: boxWidth - 20, align: 'center' });
@@ -231,7 +231,7 @@ export const generatePDFPayslip = async (payroll) => {
 
       // Total Earnings
       currentY += 10;
-      doc.fillColor('#d1fae5')
+      doc.fillColor('#e5e7eb')
          .rect(margin + 10, currentY - 5, boxWidth - 20, 25)
          .fill();
       
@@ -242,12 +242,12 @@ export const generatePDFPayslip = async (payroll) => {
       const deductionsX = margin + boxWidth + 20;
       currentY = yPos + 40;
       
-      doc.strokeColor('#ef4444')
-         .lineWidth(2)
+      doc.strokeColor('#000000')
+         .lineWidth(1)
          .rect(deductionsX, yPos, boxWidth, 300)
          .stroke();
       
-      doc.fillColor('#ef4444')
+      doc.fillColor('#000000')
          .fontSize(14)
          .font('Helvetica-Bold')
          .text('DEDUCTIONS', deductionsX + 10, yPos + 10, { width: boxWidth - 20, align: 'center' });
@@ -275,7 +275,7 @@ export const generatePDFPayslip = async (payroll) => {
 
       // Total Deductions
       currentY += 10;
-      doc.fillColor('#fee2e2')
+      doc.fillColor('#e5e7eb')
          .rect(deductionsX + 10, currentY - 5, boxWidth - 20, 25)
          .fill();
       
@@ -284,17 +284,17 @@ export const generatePDFPayslip = async (payroll) => {
 
       // Net Payable Section
       yPos = margin + 530;
-      doc.fillColor('#fef3c7')
+      doc.fillColor('#e5e7eb')
          .rect(margin, yPos, contentWidth, 50)
          .fill();
       
-      doc.strokeColor('#f59e0b')
-         .lineWidth(2)
+      doc.strokeColor('#000000')
+         .lineWidth(1)
          .rect(margin, yPos, contentWidth, 50)
          .stroke();
 
       const netPayableFormatted = formatCurrency(payroll.net_payable);
-      doc.fillColor('#92400e')
+      doc.fillColor('#000000')
          .fontSize(16)
          .font('Helvetica-Bold')
          .text('Net Payable:', margin + 20, yPos + 15, { width: 150 })
