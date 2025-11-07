@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { HorizontalBarChart } from "@/components/HorizontalBarChart";
 
 const stats = [
   {
@@ -113,6 +114,32 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Horizontal Bar Chart Examples */}
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+        <HorizontalBarChart
+          title="Top 5 Departments by Headcount"
+          data={[
+            { name: "Engineering", value: 85 },
+            { name: "Sales", value: 52 },
+            { name: "Marketing", value: 38 },
+            { name: "HR", value: 45 },
+            { name: "Finance", value: 28 },
+          ]}
+          barColor="hsl(var(--chart-1))"
+        />
+        
+        <HorizontalBarChart
+          title="Leave Requests by Type"
+          data={[
+            { name: "Sick Leave", value: 28 },
+            { name: "Casual Leave", value: 15 },
+            { name: "Paid Leave", value: 12 },
+            { name: "Maternity", value: 3 },
+          ]}
+          barColor="hsl(var(--chart-2))"
+        />
       </div>
     </div>
   );
